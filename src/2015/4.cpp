@@ -1,13 +1,13 @@
 #include <fstream>
 #include <iostream>
+#include <unordered_map>
 #include <unordered_set>
 
-bool atLeastThreeVowels (std::string input);
+bool noOverlap (std::string input);
 
-bool letterTwiceInARow (std::string input);
+bool atLeastOnLetterBetweenTwoSameLetters (std::string input);
 
-bool doesNotContainStrings (std::string input);
-
+// TODO: revisit and see why this solution doesn't work
 int
 main (int argc, char **argv)
 {
@@ -28,8 +28,7 @@ main (int argc, char **argv)
     std::string buff;
     while (getline (inFile, buff))
     {
-        if (atLeastThreeVowels (buff) && doesNotContainStrings (buff)
-            && letterTwiceInARow (buff))
+        if (noOverlap (buff) && atLeastOnLetterBetweenTwoSameLetters (buff))
             niceCount++;
     }
 
@@ -39,25 +38,29 @@ main (int argc, char **argv)
 }
 
 bool
-atLeastThreeVowels (std::string input)
+noOverlap (std::string input)
 {
-    int count = 0;
-    std::unordered_set<char> vowels ({ 'a', 'e', 'i', 'o', 'u' });
-    for (auto c : input)
+    std::unordered_map<std::string, std::pair<int, int>> beginningIndices ({});
+    for (size_t i = 0; i <= input.length () - 2; i++)
     {
-        if (vowels.find (c) != vowels.end ())
-            count++;
+        std::string window = input.substr (i, 2);
+        if (beginningIndices.find (window) != beginningIndices.end ())
+        {
+            if (i - beginningIndices[window].first < 2)
+                return false;
+            else
+            {
+                beginningIndices[window].first = i;
+                beginningIndices[window].second++;
+            }
+        }
+        else
+            beginningIndices[window] = { i, 1 };
     }
 
-    return count >= 3;
-}
-
-bool
-letterTwiceInARow (std::string input)
-{
-    for (size_t j = 1, i = 0; j < input.length (); j++, i++)
+    for (auto i = beginningIndices.begin (); i != beginningIndices.end (); i++)
     {
-        if (input[j] == input[i])
+        if (i->second.second >= 2)
             return true;
     }
 
@@ -65,15 +68,13 @@ letterTwiceInARow (std::string input)
 }
 
 bool
-doesNotContainStrings (std::string input)
+atLeastOnLetterBetweenTwoSameLetters (std::string input)
 {
-    std::unordered_set<std::string> words ({ "ab", "cd", "pq", "xy" });
-    for (size_t i = 0; i <= input.length () - 2; i++)
+    for (size_t j = 2, i = 0; j < input.length (); j++, i++)
     {
-        std::string window = input.substr (i, 2);
-        if (words.find (window) != words.end ())
-            return false;
+        if (input[j] == input[i])
+            return true;
     }
 
-    return true;
+    return false;
 }
