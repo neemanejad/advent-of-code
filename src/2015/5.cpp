@@ -72,7 +72,8 @@ main (int argc, char **argv)
                 {
                     lights[i][j]
                         += info.type == LightOperation::TurnOff ? -1 : 1;
-                    if (lights[i][j] < 0) lights[i][j] = 0;
+                    if (lights[i][j] < 0)
+                        lights[i][j] = 0;
                 }
             }
         }
