@@ -43,12 +43,12 @@ main (int argc, char **argv)
         return 2;
     }
 
-    bool lights[1000][1000];
+    int lights[1000][1000];
     for (int i = 0; i < 1000; i++)
     {
         for (int j = 0; j < 1000; j++)
         {
-            lights[i][j] = false;
+            lights[i][j] = 0;
         }
     }
 
@@ -60,7 +60,7 @@ main (int argc, char **argv)
             {
                 for (int j = info.start.y; j <= info.end.y; j++)
                 {
-                    lights[i][j] = !lights[i][j];
+                    lights[i][j] += 2;
                 }
             }
         }
@@ -71,7 +71,8 @@ main (int argc, char **argv)
                 for (int j = info.start.y; j <= info.end.y; j++)
                 {
                     lights[i][j]
-                        = info.type == LightOperation::TurnOff ? false : true;
+                        += info.type == LightOperation::TurnOff ? -1 : 1;
+                    if (lights[i][j] < 0) lights[i][j] = 0;
                 }
             }
         }
@@ -97,8 +98,7 @@ main (int argc, char **argv)
     {
         for (int j = 0; j < 1000; j++)
         {
-            if (lights[i][j])
-                count++;
+            count += lights[i][j];
         }
     }
 
