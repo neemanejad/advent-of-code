@@ -46,9 +46,9 @@ bool is_number(const std::string& s)
 }
 
 template <class T>
-void set_optional_value(Optional<T> *optional, T value) {
-    optional->value = value;
-    optional->is_set = true;
+void set_optional_value(Optional<T>& optional, T value) {
+    optional.value = value;
+    optional.is_set = true;
 }
 
 bool can_use_value(std::string str, const std::unordered_map<std::string, Wire>& wires) {
@@ -61,12 +61,6 @@ int get_value(std::string str, const std::unordered_map<std::string, Wire>& wire
     if (is_number(str)) return atoi(str.c_str());
 
     return wires.at(str).value.value;
-}
-
-void conditional_push(std::string str, const std::unordered_set<std::string> being_calcualted_set, std::stack<std::string>& stack) {
-    if (is_number(str)) return;
-
-    if (being_calcualted_set.find(str) == being_calcualted_set.end()) stack.push(str);
 }
 
 int
@@ -118,46 +112,45 @@ main (void)
 
     // Compute all values necessary for wire "a"
     std::stack<std::string> stack;
-    std::unordered_set<std::string> being_calculated;
     stack.push("a");
     while(stack.size() != 0) {
         std::string wire_name = stack.top();
         stack.pop();
-        auto wire = wires[wire_name];
+        auto wire = &wires[wire_name];
 
         // Process if the it's just a single value
-        if (wire.operation == Operation::VALUE) {
-            if (can_use_value(wire.input[0], wires)) {
-                set_optional_value(&(wire.value), get_value(wire.input[0], wires));
+        if (wire->operation == Operation::VALUE) {
+            if (can_use_value(wire->input[0], wires)) {
+                set_optional_value(wire->value, get_value(wire->input[0], wires));
             } else {
                 // Push back current wire for processing
-                stack.push(wire.name);
-                conditional_push(wire.input[0], being_calculated, stack);
+                stack.push(wire->name);
+                stack.push(wire->input[0]);
             }
-        } else if (wire.operation == Operation::NOT) {
-            if (can_use_value(wire.input[0], wires)) {
-                set_optional_value(&(wire.value), ~get_value(wire.input[0], wires));
+        } else if (wire->operation == Operation::NOT) {
+            if (can_use_value(wire->input[0], wires)) {
+                set_optional_value(wire->value, ~get_value(wire->input[0], wires));
             } else {
                 // Push back current wire for processing
-                stack.push(wire.name);
-                conditional_push(wire.input[0], being_calculated, stack);
+                stack.push(wire->name);
+                stack.push(wire->input[0]);
             }
         } 
         // Operations that require two values
         else {
-            switch(wire.operation) {
+            switch(wire->operation) {
                 case Operation::AND:
                 {
                     // Check both values to see if they're present, if not, add 
                     // current wire back to stack then add each input wire as needed to the stack
-                    auto wire1 = wire.input[0];
-                    auto wire2 = wire.input[1];
+                    auto wire1 = wire->input[0];
+                    auto wire2 = wire->input[1];
                     if (can_use_value(wire1, wires) && can_use_value(wire2, wires)) {
-                        set_optional_value(&(wire.value), get_value(wire1, wires) & get_value(wire1, wires));
+                        set_optional_value(wire->value, get_value(wire1, wires) & get_value(wire2, wires));
                     } else {
-                        stack.push(wire.name);
-                        if (!can_use_value(wire1, wires)) conditional_push(wire1, being_calculated, stack);
-                        if (!can_use_value(wire2, wires)) conditional_push(wire2, being_calculated, stack);
+                        stack.push(wire->name);
+                        if (!can_use_value(wire1, wires)) stack.push(wire1);
+                        if (!can_use_value(wire2, wires)) stack.push(wire2);
                     }
                     break;
                 }
@@ -165,14 +158,14 @@ main (void)
                 {
                     // Check both values to see if they're present, if not, add 
                     // current wire back to stack then add each input wire as needed to the stack
-                    auto wire1 = wire.input[0];
-                    auto wire2 = wire.input[1];
+                    auto wire1 = wire->input[0];
+                    auto wire2 = wire->input[1];
                     if (can_use_value(wire1, wires) && can_use_value(wire2, wires)) {
-                        set_optional_value(&(wire.value), get_value(wire1, wires) | get_value(wire1, wires));
+                        set_optional_value(wire->value, get_value(wire1, wires) | get_value(wire2, wires));
                     } else {
-                        stack.push(wire.name);
-                        if (!can_use_value(wire1, wires)) conditional_push(wire1, being_calculated, stack);
-                        if (!can_use_value(wire2, wires)) conditional_push(wire2, being_calculated, stack);
+                        stack.push(wire->name);
+                        if (!can_use_value(wire1, wires)) stack.push(wire1);
+                        if (!can_use_value(wire2, wires)) stack.push(wire2);
                     }
                     break;
                 }
@@ -180,14 +173,14 @@ main (void)
                 {
                     // Check both values to see if they're present, if not, add 
                     // current wire back to stack then add other wire to stack
-                    auto wire1 = wire.input[0];
-                    auto wire2 = wire.input[1];
+                    auto wire1 = wire->input[0];
+                    auto wire2 = wire->input[1];
                     if (can_use_value(wire1, wires) && can_use_value(wire2, wires)) {
-                        set_optional_value(&(wire.value), get_value(wire1, wires) << get_value(wire1, wires));
+                        set_optional_value(wire->value, get_value(wire1, wires) << get_value(wire2, wires));
                     } else {
-                        stack.push(wire.name);
-                        if (!can_use_value(wire1, wires)) conditional_push(wire1, being_calculated, stack);
-                        if (!can_use_value(wire2, wires)) conditional_push(wire2, being_calculated, stack);
+                        stack.push(wire->name);
+                        if (!can_use_value(wire1, wires)) stack.push(wire1);
+                        if (!can_use_value(wire2, wires)) stack.push(wire2);
                     }
                     break;
                 }
@@ -195,14 +188,14 @@ main (void)
                 {
                     // Check both values to see if they're present, if not, add 
                     // current wire back to stack then add other wire to stack
-                    auto wire1 = wire.input[0];
-                    auto wire2 = wire.input[1];
+                    auto wire1 = wire->input[0];
+                    auto wire2 = wire->input[1];
                     if (can_use_value(wire1, wires) && can_use_value(wire2, wires)) {
-                        set_optional_value(&(wire.value), get_value(wire1, wires) >> get_value(wire1, wires));
+                        set_optional_value(wire->value, get_value(wire1, wires) >> get_value(wire2, wires));
                     } else {
-                        stack.push(wire.name);
-                        if (!can_use_value(wire1, wires)) conditional_push(wire1, being_calculated, stack);
-                        if (!can_use_value(wire2, wires)) conditional_push(wire2, being_calculated, stack);
+                        stack.push(wire->name);
+                        if (!can_use_value(wire1, wires)) stack.push(wire1);
+                        if (!can_use_value(wire2, wires)) stack.push(wire2);
                     }
                     break;
                 }
